@@ -11,3 +11,52 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.bg {
+  /* The image used */
+  background-image: url("./background.jpg");
+
+  /* Full height */
+  height: 100vh;
+
+  /* Center and scale the image nicely */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.center {
+  margin: auto;
+  width: 50%;
+  padding: 10px;
+  margin-left: 700px;
+}
+
+/* .button {
+  background-color: #04AA6D !important;
+  border-radius: 5px;
+  font-size: 17px;
+  font-family: 'Source Sans Pro', sans-serif;
+  padding: 6px 18px;
+} */
+
+.rgb-button {
+  background-color: rgb(7, 236, 217);
+  /* Initial color (red) */
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  cursor: pointer;
+  height: 50px;
+  width: 100px;
+}
+
+.rgb-button:hover {
+  background-color: rgb(209, 47, 242);
+  /* Hover color (green) */
+}
+
+.rgb-button:active {
+  background-color: rgb(0, 0, 255);
+  /* Active/pressed color (blue) */
+}

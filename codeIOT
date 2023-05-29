@@ -1,0 +1,253 @@
+#include <FirebaseESP8266.h>
+#include <ArduinoJson.h>
+#include <ESP8266WiFi.h>
+#include <FastLED.h>
+#include <ESP8266HTTPClient.h> // Include the HTTPClient library
+
+#define FIREBASE_HOST "https://demolab-9dfb3-default-rtdb.asia-southeast1.firebasedatabase.app/"
+#define FIREBASE_AUTH "gn2xV8CdFiRImp4BHrV1Ycz70gWfg9SxHOpdH084"
+#define WIFI_SSID "HSU_Students"
+#define WIFI_PASSWORD "dhhs12cnvch"
+
+int r = 152;
+int g = 0;
+int b = 10;
+int brightness = 100;
+
+#define LED_PIN     D5           //CONNECT DATA PIN OF PIXEL WITH 5 NUMBER PIN OF ARDUINO
+#define NUM_LEDS    60           //CHANGE THE VALUE IF YOU WANT TO USE DIFFRENT NUMBER OF LED IN YOUR STRIP,HERE IN MY STRIP NUMBER OF LED IS 60 SO I SET IT 60.
+#define SOUND_SENSOR_PIN A0
+const int BUTTON_PIN = D2; // Pin number where the button is connected
+int buttonState = LOW;     // Variable to store the current button state
+int lastButtonState = LOW; // Variable to store the previous button state
+
+int soundValue = 0;
+int currentMode = 0;
+int prevMode = 0;
+bool buttonPressed = false;
+
+CRGB leds[NUM_LEDS];
+CRGB led[NUM_LEDS];
+
+CRGBPalette16 colorPalette;
+FirebaseData firebaseData;
+FirebaseData firebaseValue;
+FirebaseData firebaseRed;
+FirebaseData firebaseGreen;
+FirebaseData firebaseBlue;
+
+
+void setup() {
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial.println("WiFi connected");
+  
+  // Initialize Firebase
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+  Firebase.reconnectWiFi(true);
+  // Initialize the LED strip
+  FastLED.setBrightness(brightness);
+  colorPalette = RainbowColors_p;
+  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
+  for (int i = NUM_LEDS/2; i >= 0; i--) 
+  {
+     leds[i] = CRGB ( r,g,b);
+     leds[NUM_LEDS-i] = CRGB (r,g,b );
+     delay(40);
+    FastLED.show();
+  }
+
+  pinMode(BUTTON_PIN, INPUT);
+  Serial.begin(9600);
+}
+void loop() {
+  buttonState = digitalRead(BUTTON_PIN);
+
+  // Check if the button state has changed
+  if (buttonState != lastButtonState) {
+    // Button state has changed, perform the desired action
+    if (buttonState == HIGH) {
+      // Button has been pressed
+      resetBoard();  // Call the reset function
+    }
+
+    // Update the last button state
+    lastButtonState = buttonState;
+  }
+  currentMode = checkAndUpdateMode(firebaseData, currentMode);
+  Serial.println(currentMode);
+
+  bool shouldResetBoard = false; // Flag to indicate if the board should be reset
+
+  while (currentMode != 0) {
+    FastLED.clear();
+    FastLED.setDither(true);
+
+    switch (currentMode) {
+      case 1:
+        while (currentMode == 1) {
+          if (!checkModeVisualizer(currentMode)) {
+            shouldResetBoard = true; // Set the flag to true if the mode has changed
+            break; // Exit the mode if it has changed
+          }
+        }
+        break;
+
+      case 2:
+        while (currentMode == 2) {
+          if (!checkModeVU(currentMode)) {
+            shouldResetBoard = true; // Set the flag to true if the mode has changed
+            break; // Exit the mode if it has changed
+          }
+        }
+        break;
+
+      case 3:
+        mode_LedRBG();
+        break;
+
+      case 4:
+        custome_Color();
+        break;
+    }
+    FastLED.setDither(false);
+    FastLED.show();
+    currentMode = checkAndUpdateMode(firebaseData, currentMode);
+  }
+}
+
+void buttonInterrupt() {
+  buttonPressed = true; // Set the button press flag
+}
+void resetBoard() {
+  ESP.reset(); // Reset the board
+}
+
+int checkAndUpdateMode(FirebaseData& firebaseData, int prevMode) {
+  Firebase.getInt(firebaseData, "/mode");
+  if (firebaseData.httpCode() == HTTP_CODE_OK && firebaseData.dataType() == "int") {
+    int newMode = firebaseData.intData();
+    if (newMode != prevMode) {
+      Serial.print("Mode changed to ");
+      Serial.println(newMode);
+      return newMode;
+    }
+  }
+  return prevMode;
+}
+
+bool checkModeVisualizer(int currentMode) {
+    Visualizer_Mode();
+    int newMode = 1;
+      if (newMode != currentMode) {
+      return false; // Mode has changed, exit the mode
+    }
+    return true;
+}
+
+
+bool checkModeVU(int currentMode){
+    VU_Meter_Mode();
+    int newMode = 2;
+        if (newMode != currentMode) {
+        return false; // Mode has changed, exit the mode
+      }
+    return true;
+}
+
+void Visualizer_Mode() {
+  soundValue = analogRead(SOUND_SENSOR_PIN);
+  Serial.println(soundValue);
+  int s = soundValue;
+  if (s >= 200) {
+    if ((s >= 450) && (s <= 550)) {
+      leds[(NUM_LEDS / 2) - 1] = CRGB(0, 0, 255);
+      leds[NUM_LEDS / 2] = CRGB(0, 0, 255);
+    } else if ((s >= 400) && (s <= 450)) {
+      leds[(NUM_LEDS / 2) - 1] = CRGB(153, 153, 0);
+      leds[NUM_LEDS / 2] = CRGB(153, 153, 0);
+    } else if ((s >= 350) && (s <= 400)) {
+      leds[(NUM_LEDS / 2) - 1] = CRGB(255, 50, 255);
+      leds[NUM_LEDS / 2] = CRGB(255, 50, 255);
+    } else if ((s >= 300) && (s <= 350)) {
+      leds[(NUM_LEDS / 2) - 1] = CRGB(10, 25, 217);
+      leds[NUM_LEDS / 2] = CRGB(10, 25, 217);
+    } else if ((s >= 276) && (s <= 300)) {
+      leds[(NUM_LEDS / 2) - 1] = CRGB(50, 50, 150);
+      leds[NUM_LEDS / 2] = CRGB(50, 50, 150);
+    } else if ((s >= 250) && (s <= 275)) {
+      leds[(NUM_LEDS / 2) - 1] = CRGB(230, 0, 10);
+      leds[NUM_LEDS / 2] = CRGB(230, 0, 10);
+    } else if ((s >= 235) && (s <= 250)) {
+      leds[(NUM_LEDS / 2) - 1] = CRGB(0, 160, 0);
+      leds[NUM_LEDS / 2] = CRGB(0, 160, 0);
+    } else if ((s >= 200) && (s <= 230)) {
+      leds[(NUM_LEDS / 2) - 1] = CRGB(1, 0, 1);
+      leds[NUM_LEDS / 2] = CRGB(1, 0, 1);
+    } else {
+      leds[(NUM_LEDS / 2) - 1] = CRGB(r, s - 100, b);
+      leds[NUM_LEDS / 2] = CRGB(r, s - 100, b);
+    }
+  } else {
+    // Turn off LEDs when value < 200
+    leds[(NUM_LEDS / 2) - 1] = CRGB(0, 0, 0);
+    leds[NUM_LEDS / 2] = CRGB(0, 0, 0);
+  }
+
+  for (int i = 0; i <= ((NUM_LEDS / 2) - 2); i++) {
+    leds[i] = leds[i + 1];
+    leds[NUM_LEDS - 1 - i] = leds[(NUM_LEDS) - i - 2];
+  }
+
+  FastLED.show();
+  Serial.println("Visualizer_Mode");
+  delay(25);
+}
+
+void VU_Meter_Mode(){
+  soundValue = analogRead(SOUND_SENSOR_PIN);
+  int ledHeight = map(soundValue, 0, 1023, 0, NUM_LEDS);
+  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  
+  for (int i = 0; i < ledHeight; i++) {
+    leds[i] = ColorFromPalette(colorPalette, soundValue);
+  }
+  
+  FastLED.show();
+  Serial.println("VU_Meter_Mode");
+  delay(50);
+}
+
+void mode_LedRBG() {
+  int hue = 0; 
+    for (int i = 0; i < NUM_LEDS; i++) {
+    leds[i] = CHSV(hue + (i * 5), 255, 255);
+  }
+  FastLED.show();
+  hue++;
+  Serial.println("mode_LedRBG");
+  delay(50);
+}
+
+void custome_Color() {
+    Firebase.getInt(firebaseRed, "/RGB/r");
+    Firebase.getInt(firebaseGreen, "/RGB/g");
+    Firebase.getInt(firebaseBlue, "/RGB/b");
+    int r = firebaseRed.intData();
+    int g = firebaseGreen.intData();
+    int b = firebaseBlue.intData();
+    CRGB colorData = CRGB(r, g, b);  
+
+    fill_solid(leds, NUM_LEDS, colorData);
+    FastLED.show();
+    Serial.print("Custom Color (R,G,B): ");
+    Serial.print(r);
+    Serial.print(", ");
+    Serial.print(g);
+    Serial.print(", ");
+    Serial.println(b);
+}
