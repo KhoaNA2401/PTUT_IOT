@@ -4,8 +4,29 @@ import { ColorPicker, useColor } from "react-color-palette";
 import "react-color-palette/lib/css/styles.css";
 import img from './background.jpg'
 function App() {
+  const [text, setText] = useState([])
   const [color, setColor] = useColor("hex", "#121212");
-  const [mode, setMode] = useState(4);
+  const [mode, setMode] = useState([]);
+
+  const displayText = [
+    {
+      id: 1,
+      text: 'Visualizer Mode'
+    },
+    {
+      id: 2,
+      text: 'VU Meter Mode'
+    },
+    {
+      id: 3,
+      text: 'RGB Mode'
+    },
+    {
+      id: 4,
+      text: 'Custome Color Mode'
+    },
+  ]
+
   useEffect(() => {
     fetch('https://demolab-9dfb3-default-rtdb.asia-southeast1.firebasedatabase.app/.json', {
       method: 'PUT',
@@ -18,7 +39,8 @@ function App() {
   }, [color, mode]);
 
   useEffect(() => {
-    if (mode == 3 || mode == 4) {
+    setText(mode)
+    if (mode == 1 || mode == 2) {
       alert('Please click reset button in devices to load the new mode this mode will be load after 10s')
     }
   }, [mode])
@@ -33,6 +55,15 @@ function App() {
         }}>
           <p >
             Wellcome to the controlled LED mode
+          </p>
+        </div>
+        <div style={{
+          fontSize: '30px',
+          color: 'white',
+        }}>
+          {/* each mode == displayText.id */}
+          <p >
+            Your mode: {displayText[mode - 1]?.text}
           </p>
         </div>
         <div style={{
